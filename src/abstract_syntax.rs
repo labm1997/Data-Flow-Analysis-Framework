@@ -22,27 +22,10 @@ pub enum Statement {
 
 #[derive(Debug, Clone)]
 pub enum Expression {
-    // Arithmetic expressions
-    VarExp(VarExp),
-    NumExp(NumExp),
-    AddExp(AddExp),
-    SubExp(SubExp),
-    MulExp(MulExp),
-    DivExp(DivExp),
-
-    // Boolean expressions
-    CTrue(),
-    CFalse(),
-    NotExp(NotExp),
-    AndExp(AndExp),
-    OrExp(OrExp),
-
-    EqExp(EqExp),
-    GTExp(GTExp),
-    LTExp(LTExp),
-    GEqExp(GEqExp),
-    LEqExp(LEqExp),
+    ArithmeticExpression(Box<ArithmeticExpression>),
+    BooleanExpression(Box<BooleanExpression>),
 }
+
 #[derive(Debug, Clone)]
 pub enum ArithmeticExpression {
     VarExp(VarExp),
@@ -101,7 +84,7 @@ pub struct WhileStmt {
 
 #[derive(Debug, Clone)]
 pub struct Condition {
-    pub exp: BooleanExpression,
+    pub exp: Box<BooleanExpression>,
     pub label: Label,
 }
 
@@ -170,30 +153,30 @@ pub struct OrExp {
 
 #[derive(Debug, Clone)]
 pub struct EqExp {
-    pub left: ArithmeticExpression,
-    pub right: ArithmeticExpression,
+    pub left: Box<ArithmeticExpression>,
+    pub right: Box<ArithmeticExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct GTExp {
-    pub left: ArithmeticExpression,
-    pub right: ArithmeticExpression,
+    pub left: Box<ArithmeticExpression>,
+    pub right: Box<ArithmeticExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct LTExp {
-    pub left: ArithmeticExpression,
-    pub right: ArithmeticExpression,
+    pub left: Box<ArithmeticExpression>,
+    pub right: Box<ArithmeticExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct GEqExp {
-    pub left: ArithmeticExpression,
-    pub right: ArithmeticExpression,
+    pub left: Box<ArithmeticExpression>,
+    pub right: Box<ArithmeticExpression>,
 }
 
 #[derive(Debug, Clone)]
 pub struct LEqExp {
-    pub left: ArithmeticExpression,
-    pub right: ArithmeticExpression,
+    pub left: Box<ArithmeticExpression>,
+    pub right: Box<ArithmeticExpression>,
 }
