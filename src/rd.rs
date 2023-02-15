@@ -3,7 +3,7 @@ use std::{collections::HashSet, hash::Hash};
 use crate::{
     abstract_syntax::{AssignmentStmt, Block, Label, Name, Program, UNDEF},
     framework::{Edge, Framework},
-    utils::{assignments, flow, fv_st, init},
+    utils::{assignments, flow, fv_st, init, union},
 };
 
 pub struct ReachingDefinition {
@@ -50,17 +50,7 @@ impl Framework<L> for ReachingDefinition {
 
     // Set union function
     fn set_union(&self, set1: HashSet<L>, set2: HashSet<L>) -> HashSet<L> {
-        let mut union = HashSet::new();
-
-        for e in set1 {
-            union.insert(e);
-        }
-
-        for e in set2 {
-            union.insert(e);
-        }
-
-        return union;
+        return union(set1, set2);
     }
 
     fn kill(&self, block: Box<Block>) -> HashSet<L> {

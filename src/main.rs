@@ -1,4 +1,5 @@
 pub mod abstract_syntax;
+pub mod ae;
 pub mod framework;
 pub mod rd;
 pub mod utils;
@@ -9,6 +10,7 @@ use crate::{
         Expression, GTExp, IfElseStmt, MulExp, NumExp, SequenceStmt, SkipStmt, Statement, SubExp,
         VarExp, WhileStmt,
     },
+    ae::AvailableExpressions,
     framework::solve,
     rd::ReachingDefinition,
     utils::{assignments, blocks, flow, flow_r, fv_st, init, label, r#final},
@@ -109,84 +111,89 @@ fn main() {
     //    4:   a = a+1
     //    5:   x = a+b
     // */
-    // let program1 = Box::new(Statement::SequenceStmt(SequenceStmt {
-    //     s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
-    //         name: "x".to_string(),
-    //         exp: Box::new(Expression::ArithmeticExpression(Box::new(
-    //             ArithmeticExpression::AddExp(AddExp {
-    //                 left: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                     name: "a".to_string(),
-    //                 })),
-    //                 right: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                     name: "b".to_string(),
-    //                 })),
-    //             }),
-    //         ))),
-    //         label: 1,
-    //     })),
-    //     s2: Box::new(Statement::SequenceStmt(SequenceStmt {
-    //         s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
-    //             name: "y".to_string(),
-    //             exp: Box::new(Expression::ArithmeticExpression(Box::new(
-    //                 ArithmeticExpression::MulExp(MulExp {
-    //                     left: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                         name: "a".to_string(),
-    //                     })),
-    //                     right: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                         name: "b".to_string(),
-    //                     })),
-    //                 }),
-    //             ))),
-    //             label: 2,
-    //         })),
-    //         s2: Box::new(Statement::WhileStmt(WhileStmt {
-    //             condition: Condition {
-    //                 exp: Box::new(BooleanExpression::GTExp(GTExp {
-    //                     left: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                         name: "y".to_string(),
-    //                     })),
-    //                     right: Box::new(ArithmeticExpression::AddExp(AddExp {
-    //                         left: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                             name: "a".to_string(),
-    //                         })),
-    //                         right: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                             name: "b".to_string(),
-    //                         })),
-    //                     })),
-    //                 })),
-    //                 label: 3,
-    //             },
-    //             stmt: Box::new(Statement::SequenceStmt(SequenceStmt {
-    //                 s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
-    //                     name: "a".to_string(),
-    //                     exp: Box::new(Expression::ArithmeticExpression(Box::new(
-    //                         ArithmeticExpression::AddExp(AddExp {
-    //                             left: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                                 name: "a".to_string(),
-    //                             })),
-    //                             right: Box::new(ArithmeticExpression::NumExp(NumExp { value: 1 })),
-    //                         }),
-    //                     ))),
-    //                     label: 4,
-    //                 })),
-    //                 s2: Box::new(Statement::AssignmentStmt(AssignmentStmt {
-    //                     name: "x".to_string(),
-    //                     exp: Box::new(Expression::ArithmeticExpression(Box::new(
-    //                         ArithmeticExpression::AddExp(AddExp {
-    //                             left: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                                 name: "a".to_string(),
-    //                             })),
-    //                             right: Box::new(ArithmeticExpression::VarExp(VarExp {
-    //                                 name: "b".to_string(),
-    //                             })),
-    //                         }),
-    //                     ))),
-    //                     label: 5,
-    //                 })),
-    //             })),
-    //         })),
-    //     })),
-    // }));
+    let available_expressions_program = Box::new(Statement::SequenceStmt(SequenceStmt {
+        s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+            name: "x".to_string(),
+            exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                ArithmeticExpression::AddExp(AddExp {
+                    left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                        name: "a".to_string(),
+                    })),
+                    right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                        name: "b".to_string(),
+                    })),
+                }),
+            ))),
+            label: 1,
+        })),
+        s2: Box::new(Statement::SequenceStmt(SequenceStmt {
+            s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+                name: "y".to_string(),
+                exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                    ArithmeticExpression::MulExp(MulExp {
+                        left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "a".to_string(),
+                        })),
+                        right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "b".to_string(),
+                        })),
+                    }),
+                ))),
+                label: 2,
+            })),
+            s2: Box::new(Statement::WhileStmt(WhileStmt {
+                condition: Condition {
+                    exp: Box::new(BooleanExpression::GTExp(GTExp {
+                        left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "y".to_string(),
+                        })),
+                        right: Box::new(ArithmeticExpression::AddExp(AddExp {
+                            left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                                name: "a".to_string(),
+                            })),
+                            right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                                name: "b".to_string(),
+                            })),
+                        })),
+                    })),
+                    label: 3,
+                },
+                stmt: Box::new(Statement::SequenceStmt(SequenceStmt {
+                    s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+                        name: "a".to_string(),
+                        exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                            ArithmeticExpression::AddExp(AddExp {
+                                left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                                    name: "a".to_string(),
+                                })),
+                                right: Box::new(ArithmeticExpression::NumExp(NumExp { value: 1 })),
+                            }),
+                        ))),
+                        label: 4,
+                    })),
+                    s2: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+                        name: "x".to_string(),
+                        exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                            ArithmeticExpression::AddExp(AddExp {
+                                left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                                    name: "a".to_string(),
+                                })),
+                                right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                                    name: "b".to_string(),
+                                })),
+                            }),
+                        ))),
+                        label: 5,
+                    })),
+                })),
+            })),
+        })),
+    }));
+
+    println!("Available Expressions");
+    solve(Box::new(AvailableExpressions {
+        program: available_expressions_program,
+    }));
 
     /*
        1: x = 5
@@ -195,7 +202,7 @@ fn main() {
        4:   y = x*y
        5:   x = x-1
     */
-    let program2 = Box::new(Statement::SequenceStmt(SequenceStmt {
+    let reaching_definitions_program = Box::new(Statement::SequenceStmt(SequenceStmt {
         s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
             name: "x".to_string(),
             exp: Box::new(Expression::ArithmeticExpression(Box::new(
@@ -253,7 +260,8 @@ fn main() {
         })),
     }));
 
-    let reaching_definitions = Box::new(ReachingDefinition { program: program2 });
-
-    solve(reaching_definitions);
+    println!("Reaching Definition");
+    solve(Box::new(ReachingDefinition {
+        program: reaching_definitions_program,
+    }));
 }

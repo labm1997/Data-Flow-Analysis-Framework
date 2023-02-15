@@ -28,7 +28,7 @@ pub enum Expression {
     BooleanExpression(Box<BooleanExpression>),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ArithmeticExpression {
     VarExp(VarExp),
     NumExp(NumExp),
@@ -92,35 +92,35 @@ pub struct Condition {
 
 /* Arithmetic expressio
 ns */
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct VarExp {
     pub name: Name,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct NumExp {
     pub value: Integer,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AddExp {
     pub left: Box<ArithmeticExpression>,
     pub right: Box<ArithmeticExpression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SubExp {
     pub left: Box<ArithmeticExpression>,
     pub right: Box<ArithmeticExpression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MulExp {
     pub left: Box<ArithmeticExpression>,
     pub right: Box<ArithmeticExpression>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct DivExp {
     pub left: Box<ArithmeticExpression>,
     pub right: Box<ArithmeticExpression>,

@@ -1,3 +1,5 @@
+use std::{collections::HashSet, hash::Hash};
+
 use crate::abstract_syntax::{
     AddExp, AndExp, ArithmeticExpression, AssignmentStmt, Block, BooleanExpression, CFalse, CTrue,
     Condition, DivExp, EqExp, Expression, GEqExp, GTExp, IfElseStmt, LEqExp, LTExp, Label, MulExp,
@@ -195,4 +197,146 @@ pub fn flow_r(stmt: Box<Statement>) -> Vec<Edge> {
         .into_iter()
         .map(|(source, target)| (target, source))
         .collect();
+}
+
+pub fn union<L: Eq + Hash>(set1: HashSet<L>, set2: HashSet<L>) -> HashSet<L> {
+    let mut union = HashSet::new();
+
+    for e in set1 {
+        union.insert(e);
+    }
+
+    for e in set2 {
+        union.insert(e);
+    }
+
+    return union;
+}
+
+pub fn intersection<L: Eq + Hash>(set1: HashSet<L>, set2: HashSet<L>) -> HashSet<L> {
+    let mut intersection = HashSet::new();
+
+    for e1 in set1 {
+        if set2.contains(&e1) {
+            intersection.insert(e1);
+        }
+    }
+
+    return intersection;
+}
+
+pub fn complexExpressions_be(exp: Box<BooleanExpression>) -> HashSet<ArithmeticExpression> {
+    return match *exp {
+        BooleanExpression::CTrue(CTrue {}) => HashSet::new(),
+        BooleanExpression::CFalse(CFalse {}) => HashSet::new(),
+        BooleanExpression::NotExp(NotExp { exp }) => complexExpressions_be(exp),
+        BooleanExpression::AndExp(AndExp { left, right }) => {
+            union(complexExpressions_be(left), complexExpressions_be(right))
+        }
+        BooleanExpression::OrExp(OrExp { left, right }) => {
+            union(complexExpressions_be(left), complexExpressions_be(right))
+        }
+        BooleanExpression::EqExp(EqExp { left, right }) => {
+            union(complexExpressions_ae(left), complexExpressions_ae(right))
+        }
+        BooleanExpression::GTExp(GTExp { left, right }) => {
+            union(complexExpressions_ae(left), complexExpressions_ae(right))
+        }
+        BooleanExpression::LTExp(LTExp { left, right }) => {
+            union(complexExpressions_ae(left), complexExpressions_ae(right))
+        }
+        BooleanExpression::GEqExp(GEqExp { left, right }) => {
+            union(complexExpressions_ae(left), complexExpressions_ae(right))
+        }
+        BooleanExpression::LEqExp(LEqExp { left, right }) => {
+            union(complexExpressions_ae(left), complexExpressions_ae(right))
+        }
+    };
+}
+
+pub fn complexExpressions_ae(exp: Box<ArithmeticExpression>) -> HashSet<ArithmeticExpression> {
+    return match *exp {
+        ArithmeticExpression::VarExp(VarExp { name: _ }) => HashSet::new(),
+        ArithmeticExpression::NumExp(NumExp { value: _ }) => HashSet::new(),
+        ArithmeticExpression::AddExp(AddExp { left, right }) => union(
+            union(
+                HashSet::from([ArithmeticExpression::AddExp(AddExp {
+                    left: left.clone(),
+                    right: right.clone(),
+                })]),
+                complexExpressions_ae(left),
+            ),
+            complexExpressions_ae(right),
+        ),
+        ArithmeticExpression::SubExp(SubExp { left, right }) => union(
+            union(
+                HashSet::from([ArithmeticExpression::SubExp(SubExp {
+                    left: left.clone(),
+                    right: right.clone(),
+                })]),
+                complexExpressions_ae(left),
+            ),
+            complexExpressions_ae(right),
+        ),
+        ArithmeticExpression::MulExp(MulExp { left, right }) => union(
+            union(
+                HashSet::from([ArithmeticExpression::MulExp(MulExp {
+                    left: left.clone(),
+                    right: right.clone(),
+                })]),
+                complexExpressions_ae(left),
+            ),
+            complexExpressions_ae(right),
+        ),
+        ArithmeticExpression::DivExp(DivExp { left, right }) => union(
+            union(
+                HashSet::from([ArithmeticExpression::DivExp(DivExp {
+                    left: left.clone(),
+                    right: right.clone(),
+                })]),
+                complexExpressions_ae(left),
+            ),
+            complexExpressions_ae(right),
+        ),
+    };
+}
+
+pub fn complexExpressions_c(c: Box<Condition>) -> HashSet<ArithmeticExpression> {
+    return complexExpressions_be(c.exp);
+}
+
+pub fn complexExpressions_e(exp: Box<Expression>) -> HashSet<ArithmeticExpression> {
+    return match *exp {
+        Expression::ArithmeticExpression(data) => complexExpressions_ae(data),
+        Expression::BooleanExpression(data) => complexExpressions_be(data),
+    };
+}
+
+pub fn complexExpressions_stmt(stmt: Box<Statement>) -> HashSet<ArithmeticExpression> {
+    return match *stmt {
+        Statement::AssignmentStmt(AssignmentStmt {
+            name: _,
+            exp,
+            label: _,
+        }) => complexExpressions_e(exp),
+        Statement::SkipStmt(SkipStmt { label: _ }) => HashSet::new(),
+        Statement::SequenceStmt(SequenceStmt { s1, s2 }) => {
+            union(complexExpressions_stmt(s1), complexExpressions_stmt(s2))
+        }
+        Statement::IfElseStmt(IfElseStmt {
+            condition,
+            then_stmt,
+            else_stmt,
+        }) => union(
+            union(
+                complexExpressions_c(Box::new(condition)),
+                complexExpressions_stmt(then_stmt),
+            ),
+            complexExpressions_stmt(else_stmt),
+        ),
+        Statement::WhileStmt(WhileStmt { condition, stmt }) => union(
+            complexExpressions_c(Box::new(condition)),
+            complexExpressions_stmt(stmt),
+        ),
+    };
 }
