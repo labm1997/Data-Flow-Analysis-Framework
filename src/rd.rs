@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 use crate::{
     abstract_syntax::{AssignmentStmt, Block, Label, Name, Program, UNDEF},
@@ -10,35 +10,45 @@ pub struct ReachingDefinition {
     program: Box<Program>,
 }
 
-fn build_T(name: Name, label: Label) -> (String, (Name, Label)) {
-    let key = name.to_string() + "-" + &label.to_string();
-    return (key, (name.to_string(), label));
+#[derive(PartialEq, Eq, Hash, Clone)]
+struct L {
+    name: Name,
+    label: Label,
 }
 
-impl Framework<(Name, Label)> for ReachingDefinition {
+impl Framework<L> for ReachingDefinition {
+    fn get_program(&self) -> Box<Program> {
+        return self.program.clone();
+    }
     fn get_f(&self) -> Vec<Edge> {
         flow(self.program.clone())
     }
     fn get_e(&self) -> Vec<Label> {
         Vec::from([init(self.program.clone())])
     }
-    fn get_initial_e(&self) -> Vec<(Name, Label)> {
+    fn get_initial_e(&self) -> HashSet<L> {
         fv_st(self.program.clone())
             .into_iter()
-            .map(|n| (n, UNDEF))
+            .map(|n| L {
+                name: n,
+                label: UNDEF,
+            })
             .collect()
     }
-    fn get_initial_others(&self) -> Vec<(Name, Label)> {
-        Vec::new()
+    fn get_initial_others(&self) -> HashSet<L> {
+        HashSet::new()
     }
-    fn kill(&self, block: Box<Block>) -> HashMap<String, (Name, Label)> {
+    fn kill(&self, block: Box<Block>) -> HashSet<L> {
         return match *block {
             Block::AssignmentStmt(AssignmentStmt {
                 name,
                 exp: _,
                 label: _,
             }) => [
-                Vec::from([build_T(name.to_string(), UNDEF)]),
+                Vec::from([L {
+                    name: name.to_string(),
+                    label: UNDEF,
+                }]),
                 assignments(self.program.clone())
                     .into_iter()
                     .map(
@@ -46,24 +56,30 @@ impl Framework<(Name, Label)> for ReachingDefinition {
                              name: _,
                              exp: _,
                              label,
-                         }| build_T(name.to_string(), label),
+                         }| L {
+                            name: name.to_string(),
+                            label: label,
+                        },
                     )
                     .collect(),
             ]
             .concat()
             .into_iter()
-            .collect::<HashMap<String, (Name, Label)>>(),
-            _ => HashMap::new(),
+            .collect::<HashSet<L>>(),
+            _ => HashSet::new(),
         };
     }
-    fn gen(&self, block: Box<Block>) -> HashMap<String, (Name, Label)> {
+    fn gen(&self, block: Box<Block>) -> HashSet<L> {
         return match *block {
             Block::AssignmentStmt(AssignmentStmt {
                 name,
                 exp: _,
                 label,
-            }) => HashMap::from([build_T(name, label)]),
-            _ => HashMap::new(),
+            }) => HashSet::from([L {
+                name: name,
+                label: label,
+            }]),
+            _ => HashSet::new(),
         };
     }
 }
