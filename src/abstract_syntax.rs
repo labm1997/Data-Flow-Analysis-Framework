@@ -2,7 +2,7 @@ pub type Integer = i64;
 pub type Label = Integer;
 pub type Name = String;
 pub type Program = Statement;
-pub const UNDEF: Label = 0;
+pub const UNDEF: Label = -1;
 
 /* Enums */
 

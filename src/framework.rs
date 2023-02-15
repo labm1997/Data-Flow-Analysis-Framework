@@ -1,11 +1,12 @@
 use std::{
     collections::{linked_list, HashMap, HashSet, LinkedList},
+    fmt::Debug,
     hash::Hash,
 };
 
 use crate::{
     abstract_syntax::{Block, Label, Program},
-    utils::{blocks, label},
+    utils::{blocks, label, labels},
 };
 
 pub type Edge = (Label, Label);
@@ -14,22 +15,23 @@ pub trait L {
     fn key(&self) -> String;
 }
 
+// L is the property space
 pub trait Framework<L: Eq + Hash + Clone> {
     fn get_program(&self) -> Box<Program>;
 
-    // L is the property space
     fn get_f(&self) -> Vec<Edge>; // Flow graph
     fn get_e(&self) -> Vec<Label>; // Start labels
     fn get_initial_e(&self) -> HashSet<L>; // Initial values for l in E,
     fn get_initial_others(&self) -> HashSet<L>; // Initial values for l not in E but in F
-    fn kill(&self, block: Box<Block>) -> HashSet<L>;
-    fn gen(&self, block: Box<Block>) -> HashSet<L>;
 
     // Set comparator function
     fn set_compare(&self, set1: HashSet<L>, set2: HashSet<L>) -> bool;
 
     // Set union function
     fn set_union(&self, set1: HashSet<L>, set2: HashSet<L>) -> HashSet<L>;
+
+    fn kill(&self, block: Box<Block>) -> HashSet<L>;
+    fn gen(&self, block: Box<Block>) -> HashSet<L>;
 
     // Transfer function
     fn fl(&self, block: Box<Block>, entry: HashSet<L>) -> HashSet<L> {
@@ -49,52 +51,58 @@ pub trait Framework<L: Eq + Hash + Clone> {
     }
 }
 
-pub fn solve<L: Eq + Hash + Clone>(framework: Box<dyn Framework<L>>) {
+pub fn solve<L: Eq + Hash + Clone + Debug>(framework: Box<dyn Framework<L>>) {
     // Initialization
     let mut W = LinkedList::new();
     let mut analysis: HashMap<Label, HashSet<L>> = HashMap::new();
 
+    let program = framework.get_program();
     let F = framework.get_f();
     let E = framework.get_e();
     let initial_e = framework.get_initial_e();
     let initial_others = framework.get_initial_others();
-    let blocks_map: HashMap<Label, Box<Block>> = blocks(framework.get_program())
+    let blocks_map: HashMap<Label, Box<Block>> = blocks(program.clone())
         .into_iter()
         .map(|b| (label(b.clone()), b.clone()))
         .collect();
+    let program_labels = labels(program.clone());
 
-    for (l1, l2) in &F {
+    for (l1, l2) in &F.clone() {
         W.push_front((*l1, *l2));
     }
 
-    for l in &E {
-        analysis.insert(*l, initial_e.clone());
-    }
-
-    for (l1, l2) in &F {
-        if !E.contains(l1) {
-            analysis.insert(*l1, initial_others.clone());
-        }
-        if !E.contains(l2) {
-            analysis.insert(*l2, initial_others.clone());
+    for l in program_labels {
+        if E.contains(&l) {
+            analysis.insert(l, initial_e.clone());
+        } else {
+            analysis.insert(l, initial_others.clone());
         }
     }
 
     // Iteration
     while let Some((l1, l2)) = W.pop_front() {
+        println!("W: {:?}", W);
         let exit = framework.fl(blocks_map[&l1].clone(), analysis[&l1].clone());
         let entry = analysis[&l2].clone();
 
-        if framework.set_compare(exit, entry) {
-            analysis[&l2] = framework.set_union(entry, exit);
+        if !framework.set_compare(exit.clone(), entry.clone()) {
+            analysis.insert(l2, framework.set_union(entry.clone(), exit.clone()));
 
-            for (_l2, l3) in F {
-                if _l2 == l2 {
-                    W.push_front((l2, l3));
+            for (_l2, l3) in &F.clone() {
+                if *_l2 == l2 {
+                    W.push_front((l2, *l3));
                 }
             }
         }
     }
 
     // Present result
+    for (label, result) in analysis {
+        println!("label {}", label);
+        println!("  ENTRY: {:?}", result);
+        println!(
+            "  EXIT: {:?}",
+            framework.fl(blocks_map[&label].clone(), result.clone())
+        );
+    }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::Hash};
 
 use crate::{
     abstract_syntax::{AssignmentStmt, Block, Label, Name, Program, UNDEF},
@@ -7,11 +7,11 @@ use crate::{
 };
 
 pub struct ReachingDefinition {
-    program: Box<Program>,
+    pub program: Box<Program>,
 }
 
-#[derive(PartialEq, Eq, Hash, Clone)]
-struct L {
+#[derive(PartialEq, Eq, Hash, Clone, Debug)]
+pub struct L {
     name: Name,
     label: Label,
 }
@@ -20,12 +20,15 @@ impl Framework<L> for ReachingDefinition {
     fn get_program(&self) -> Box<Program> {
         return self.program.clone();
     }
+
     fn get_f(&self) -> Vec<Edge> {
         flow(self.program.clone())
     }
+
     fn get_e(&self) -> Vec<Label> {
         Vec::from([init(self.program.clone())])
     }
+
     fn get_initial_e(&self) -> HashSet<L> {
         fv_st(self.program.clone())
             .into_iter()
@@ -35,9 +38,31 @@ impl Framework<L> for ReachingDefinition {
             })
             .collect()
     }
+
     fn get_initial_others(&self) -> HashSet<L> {
         HashSet::new()
     }
+
+    // set1 está contido no set2
+    fn set_compare(&self, set1: HashSet<L>, set2: HashSet<L>) -> bool {
+        return set1.is_subset(&set2);
+    }
+
+    // Set union function
+    fn set_union(&self, set1: HashSet<L>, set2: HashSet<L>) -> HashSet<L> {
+        let mut union = HashSet::new();
+
+        for e in set1 {
+            union.insert(e);
+        }
+
+        for e in set2 {
+            union.insert(e);
+        }
+
+        return union;
+    }
+
     fn kill(&self, block: Box<Block>) -> HashSet<L> {
         return match *block {
             Block::AssignmentStmt(AssignmentStmt {
@@ -69,6 +94,7 @@ impl Framework<L> for ReachingDefinition {
             _ => HashSet::new(),
         };
     }
+
     fn gen(&self, block: Box<Block>) -> HashSet<L> {
         return match *block {
             Block::AssignmentStmt(AssignmentStmt {
