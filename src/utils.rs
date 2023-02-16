@@ -37,65 +37,57 @@ pub fn assignments(stmt: Box<Statement>) -> Vec<AssignmentStmt> {
     };
 }
 
-pub fn fv_e(exp: Box<Expression>) -> Vec<Name> {
+pub fn fv_e(exp: Box<Expression>) -> HashSet<Name> {
     return match *exp {
         Expression::ArithmeticExpression(data) => fv_ae(data),
         Expression::BooleanExpression(data) => fv_be(data),
     };
 }
 
-pub fn fv_be(exp: Box<BooleanExpression>) -> Vec<Name> {
+pub fn fv_be(exp: Box<BooleanExpression>) -> HashSet<Name> {
     return match *exp {
-        BooleanExpression::CTrue(CTrue {}) => Vec::new(),
-        BooleanExpression::CFalse(CFalse {}) => Vec::new(),
+        BooleanExpression::CTrue(CTrue {}) => HashSet::new(),
+        BooleanExpression::CFalse(CFalse {}) => HashSet::new(),
         BooleanExpression::NotExp(NotExp { exp }) => fv_be(exp),
-        BooleanExpression::AndExp(AndExp { left, right }) => [fv_be(left), fv_be(right)].concat(),
-        BooleanExpression::OrExp(OrExp { left, right }) => [fv_be(left), fv_be(right)].concat(),
-        BooleanExpression::EqExp(EqExp { left, right }) => [fv_ae(left), fv_ae(right)].concat(),
-        BooleanExpression::GTExp(GTExp { left, right }) => [fv_ae(left), fv_ae(right)].concat(),
-        BooleanExpression::LTExp(LTExp { left, right }) => [fv_ae(left), fv_ae(right)].concat(),
-        BooleanExpression::GEqExp(GEqExp { left, right }) => [fv_ae(left), fv_ae(right)].concat(),
-        BooleanExpression::LEqExp(LEqExp { left, right }) => [fv_ae(left), fv_ae(right)].concat(),
+        BooleanExpression::AndExp(AndExp { left, right }) => union(fv_be(left), fv_be(right)),
+        BooleanExpression::OrExp(OrExp { left, right }) => union(fv_be(left), fv_be(right)),
+        BooleanExpression::EqExp(EqExp { left, right }) => union(fv_ae(left), fv_ae(right)),
+        BooleanExpression::GTExp(GTExp { left, right }) => union(fv_ae(left), fv_ae(right)),
+        BooleanExpression::LTExp(LTExp { left, right }) => union(fv_ae(left), fv_ae(right)),
+        BooleanExpression::GEqExp(GEqExp { left, right }) => union(fv_ae(left), fv_ae(right)),
+        BooleanExpression::LEqExp(LEqExp { left, right }) => union(fv_ae(left), fv_ae(right)),
     };
 }
 
-pub fn fv_ae(exp: Box<ArithmeticExpression>) -> Vec<Name> {
+pub fn fv_ae(exp: Box<ArithmeticExpression>) -> HashSet<Name> {
     return match *exp {
-        ArithmeticExpression::VarExp(VarExp { name }) => Vec::from([name]),
-        ArithmeticExpression::NumExp(NumExp { value: _ }) => Vec::new(),
-        ArithmeticExpression::AddExp(AddExp { left, right }) => {
-            [fv_ae(left), fv_ae(right)].concat()
-        }
-        ArithmeticExpression::SubExp(SubExp { left, right }) => {
-            [fv_ae(left), fv_ae(right)].concat()
-        }
-        ArithmeticExpression::MulExp(MulExp { left, right }) => {
-            [fv_ae(left), fv_ae(right)].concat()
-        }
-        ArithmeticExpression::DivExp(DivExp { left, right }) => {
-            [fv_ae(left), fv_ae(right)].concat()
-        }
+        ArithmeticExpression::VarExp(VarExp { name }) => HashSet::from([name]),
+        ArithmeticExpression::NumExp(NumExp { value: _ }) => HashSet::new(),
+        ArithmeticExpression::AddExp(AddExp { left, right }) => union(fv_ae(left), fv_ae(right)),
+        ArithmeticExpression::SubExp(SubExp { left, right }) => union(fv_ae(left), fv_ae(right)),
+        ArithmeticExpression::MulExp(MulExp { left, right }) => union(fv_ae(left), fv_ae(right)),
+        ArithmeticExpression::DivExp(DivExp { left, right }) => union(fv_ae(left), fv_ae(right)),
     };
 }
 
-pub fn fv_st(stmt: Box<Statement>) -> Vec<Name> {
+pub fn fv_st(stmt: Box<Statement>) -> HashSet<Name> {
     return match *stmt {
         Statement::AssignmentStmt(AssignmentStmt {
             name: _,
             exp,
             label: _,
         }) => fv_e(exp),
-        Statement::SkipStmt(SkipStmt { label: _ }) => Vec::new(),
-        Statement::SequenceStmt(SequenceStmt { s1, s2 }) => [fv_st(s1), fv_st(s2)].concat(),
+        Statement::SkipStmt(SkipStmt { label: _ }) => HashSet::new(),
+        Statement::SequenceStmt(SequenceStmt { s1, s2 }) => union(fv_st(s1), fv_st(s2)),
         Statement::IfElseStmt(IfElseStmt {
             condition: Condition { exp, label: _ },
             then_stmt,
             else_stmt,
-        }) => [fv_be(exp), fv_st(then_stmt), fv_st(else_stmt)].concat(),
+        }) => union(union(fv_be(exp), fv_st(then_stmt)), fv_st(else_stmt)),
         Statement::WhileStmt(WhileStmt {
             condition: Condition { exp, label: _ },
             stmt,
-        }) => [fv_be(exp), fv_st(stmt)].concat(),
+        }) => union(fv_be(exp), fv_st(stmt)),
     };
 }
 
@@ -164,6 +156,7 @@ pub fn flow(stmt: Box<Statement>) -> Vec<Edge> {
         Statement::AssignmentStmt(_) => Vec::new(),
         Statement::SkipStmt(_) => Vec::new(),
         Statement::SequenceStmt(SequenceStmt { s1, s2 }) => [
+            flow(s1.clone()),
             flow(s2.clone()),
             r#final(s1.clone())
                 .into_iter()
@@ -176,8 +169,12 @@ pub fn flow(stmt: Box<Statement>) -> Vec<Edge> {
             then_stmt,
             else_stmt,
         }) => [
+            flow(then_stmt.clone()),
             flow(else_stmt.clone()),
-            Vec::from([(label, init(then_stmt)), (label, init(else_stmt.clone()))]),
+            Vec::from([
+                (label, init(then_stmt.clone())),
+                (label, init(else_stmt.clone())),
+            ]),
         ]
         .concat(),
         Statement::WhileStmt(WhileStmt {

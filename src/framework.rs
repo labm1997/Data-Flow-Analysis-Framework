@@ -16,8 +16,12 @@ pub trait L {
 }
 
 // L is the property space
-pub trait Framework<L: Eq + Hash + Clone> {
+pub trait Framework<L: Eq + Hash + Clone + Debug> {
     fn get_program(&self) -> Box<Program>;
+
+    fn is_backwards(&self) -> bool {
+        return false;
+    }
 
     fn get_f(&self) -> Vec<Edge>; // Flow graph
     fn get_e(&self) -> Vec<Label>; // Start labels
@@ -58,6 +62,7 @@ pub fn solve<L: Eq + Hash + Clone + Debug>(framework: Box<dyn Framework<L>>) {
 
     let program = framework.get_program();
     let F = framework.get_f();
+    println!("F: {:?}", F);
     let E = framework.get_e();
     let initial_e = framework.get_initial_e();
     let initial_others = framework.get_initial_others();
@@ -99,10 +104,18 @@ pub fn solve<L: Eq + Hash + Clone + Debug>(framework: Box<dyn Framework<L>>) {
     // Present result
     for (label, result) in analysis {
         println!("label {}", label);
-        println!("  ENTRY: {:?}", result);
-        println!(
-            "  EXIT: {:?}",
-            framework.fl(blocks_map[&label].clone(), result.clone())
-        );
+        if !framework.is_backwards() {
+            println!("  ENTRY: {:?}", result);
+            println!(
+                "  EXIT: {:?}",
+                framework.fl(blocks_map[&label].clone(), result.clone())
+            );
+        } else {
+            println!(
+                "  ENTRY: {:?}",
+                framework.fl(blocks_map[&label].clone(), result.clone())
+            );
+            println!("  EXIT: {:?}", result);
+        }
     }
 }
