@@ -4,6 +4,7 @@ pub mod framework;
 pub mod lv;
 pub mod rd;
 pub mod utils;
+pub mod vb;
 
 use crate::{
     abstract_syntax::{
@@ -16,6 +17,7 @@ use crate::{
     lv::LiveVariables,
     rd::ReachingDefinition,
     utils::{assignments, blocks, flow, flow_r, fv_st, init, label, r#final},
+    vb::VeryBusyExpressions,
 };
 
 fn main() {
@@ -354,5 +356,92 @@ fn main() {
     println!("Live Variables");
     solve(Box::new(LiveVariables {
         program: live_variables_program,
+    }));
+
+    /*
+       1: if a > b  then
+       2:   x = b - a
+       3:   y = a - b
+          else
+       4:   y = b - a
+       5:   x = a - b
+    */
+    let very_busy_expressions_program = Box::new(Statement::IfElseStmt(IfElseStmt {
+        condition: Condition {
+            exp: Box::new(BooleanExpression::GTExp(GTExp {
+                left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                    name: "a".to_string(),
+                })),
+                right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                    name: "b".to_string(),
+                })),
+            })),
+            label: 1,
+        },
+        then_stmt: Box::new(Statement::SequenceStmt(SequenceStmt {
+            s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+                name: "x".to_string(),
+                exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                    ArithmeticExpression::SubExp(SubExp {
+                        left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "b".to_string(),
+                        })),
+                        right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "a".to_string(),
+                        })),
+                    }),
+                ))),
+                label: 2,
+            })),
+            s2: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+                name: "y".to_string(),
+                exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                    ArithmeticExpression::SubExp(SubExp {
+                        left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "a".to_string(),
+                        })),
+                        right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "b".to_string(),
+                        })),
+                    }),
+                ))),
+                label: 3,
+            })),
+        })),
+        else_stmt: Box::new(Statement::SequenceStmt(SequenceStmt {
+            s1: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+                name: "y".to_string(),
+                exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                    ArithmeticExpression::SubExp(SubExp {
+                        left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "b".to_string(),
+                        })),
+                        right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "a".to_string(),
+                        })),
+                    }),
+                ))),
+                label: 4,
+            })),
+            s2: Box::new(Statement::AssignmentStmt(AssignmentStmt {
+                name: "x".to_string(),
+                exp: Box::new(Expression::ArithmeticExpression(Box::new(
+                    ArithmeticExpression::SubExp(SubExp {
+                        left: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "a".to_string(),
+                        })),
+                        right: Box::new(ArithmeticExpression::VarExp(VarExp {
+                            name: "b".to_string(),
+                        })),
+                    }),
+                ))),
+                label: 5,
+            })),
+        })),
+    }));
+
+    println!("Very busy expressions");
+    solve(Box::new(VeryBusyExpressions {
+        program: very_busy_expressions_program,
     }));
 }
