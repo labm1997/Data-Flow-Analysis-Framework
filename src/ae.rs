@@ -1,12 +1,9 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use crate::{
-    abstract_syntax::{ArithmeticExpression, AssignmentStmt, Block, Label, Name, Program, UNDEF},
+    abstract_syntax::{ArithmeticExpression, AssignmentStmt, Block, Label, Program},
     framework::{Edge, Framework},
-    utils::{
-        assignments, complexExpressions_e, complexExpressions_stmt, flow, fv_ae, fv_st, init,
-        intersection,
-    },
+    utils::{complex_expressions_e, complex_expressions_stmt, flow, fv_ae, init, intersection},
 };
 
 pub struct AvailableExpressions {
@@ -31,7 +28,7 @@ impl Framework<ArithmeticExpression> for AvailableExpressions {
     }
 
     fn get_initial_others(&self) -> HashSet<ArithmeticExpression> {
-        complexExpressions_stmt(self.program.clone())
+        complex_expressions_stmt(self.program.clone())
     }
 
     // set1 está contido no set2
@@ -58,7 +55,7 @@ impl Framework<ArithmeticExpression> for AvailableExpressions {
                 name,
                 exp: _,
                 label: _,
-            }) => complexExpressions_stmt(self.program.clone())
+            }) => complex_expressions_stmt(self.program.clone())
                 .into_iter()
                 .filter(|e| fv_ae(Box::new((*e).clone())).contains(&name))
                 .collect(),
@@ -72,7 +69,7 @@ impl Framework<ArithmeticExpression> for AvailableExpressions {
                 name,
                 exp,
                 label: _,
-            }) => complexExpressions_e(exp)
+            }) => complex_expressions_e(exp)
                 .into_iter()
                 .filter(|e| !fv_ae(Box::new((*e).clone())).contains(&name))
                 .collect(),

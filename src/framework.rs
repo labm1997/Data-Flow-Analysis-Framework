@@ -1,5 +1,5 @@
 use std::{
-    collections::{linked_list, HashMap, HashSet, LinkedList},
+    collections::{HashMap, HashSet, LinkedList},
     fmt::Debug,
     hash::Hash,
 };
@@ -57,13 +57,12 @@ pub trait Framework<L: Eq + Hash + Clone + Debug> {
 
 pub fn solve<L: Eq + Hash + Clone + Debug>(framework: Box<dyn Framework<L>>) {
     // Initialization
-    let mut W = LinkedList::new();
+    let mut w = LinkedList::new();
     let mut analysis: HashMap<Label, HashSet<L>> = HashMap::new();
 
     let program = framework.get_program();
-    let F = framework.get_f();
-    println!("F: {:?}", F);
-    let E = framework.get_e();
+    let f = framework.get_f();
+    let e = framework.get_e();
     let initial_e = framework.get_initial_e();
     let initial_others = framework.get_initial_others();
     let blocks_map: HashMap<Label, Box<Block>> = blocks(program.clone())
@@ -72,12 +71,12 @@ pub fn solve<L: Eq + Hash + Clone + Debug>(framework: Box<dyn Framework<L>>) {
         .collect();
     let program_labels = labels(program.clone());
 
-    for (l1, l2) in &F.clone() {
-        W.push_front((*l1, *l2));
+    for (l1, l2) in &f.clone() {
+        w.push_front((*l1, *l2));
     }
 
     for l in program_labels {
-        if E.contains(&l) {
+        if e.contains(&l) {
             analysis.insert(l, initial_e.clone());
         } else {
             analysis.insert(l, initial_others.clone());
@@ -85,17 +84,17 @@ pub fn solve<L: Eq + Hash + Clone + Debug>(framework: Box<dyn Framework<L>>) {
     }
 
     // Iteration
-    while let Some((l1, l2)) = W.pop_front() {
-        println!("W: {:?}", W);
+    while let Some((l1, l2)) = w.pop_front() {
+        println!("W: {:?}", w);
         let exit = framework.fl(blocks_map[&l1].clone(), analysis[&l1].clone());
         let entry = analysis[&l2].clone();
 
         if !framework.set_compare(exit.clone(), entry.clone()) {
             analysis.insert(l2, framework.set_union(entry.clone(), exit.clone()));
 
-            for (_l2, l3) in &F.clone() {
+            for (_l2, l3) in &f.clone() {
                 if *_l2 == l2 {
-                    W.push_front((l2, *l3));
+                    w.push_front((l2, *l3));
                 }
             }
         }

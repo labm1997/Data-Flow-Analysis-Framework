@@ -1,14 +1,9 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use crate::{
-    abstract_syntax::{
-        ArithmeticExpression, AssignmentStmt, Block, Condition, Label, Name, Program, UNDEF,
-    },
+    abstract_syntax::{AssignmentStmt, Block, Condition, Label, Name, Program},
     framework::{Edge, Framework},
-    utils::{
-        assignments, complexExpressions_e, complexExpressions_stmt, flow, flow_r, fv_ae, fv_be,
-        fv_e, fv_st, init, intersection, r#final, union,
-    },
+    utils::{flow_r, fv_be, fv_e, r#final, union},
 };
 
 pub struct LiveVariables {
